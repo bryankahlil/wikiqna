@@ -58,7 +58,7 @@ def create_vector_store(data):
             persist_directory='db',
         )
         store.persist()  # Ensure the embeddings are persisted
-        st.write(f"Vector store created with {len(data)} documents.")  # Debugging line
+        # st.write(f"Vector store created with {len(data)} documents.")  # Debugging line
         return store
     except Exception as e:
         st.error(f"Error creating vector store: {e}")
@@ -99,9 +99,9 @@ if st.button("Load Article"):
     with st.spinner("Loading data..."):
         data = load_data_from_wikipedia(url)
         
-        # Debugging step: Check the retrieved data before creating vector store
-        st.write("### Article Content Preview (First 1000 characters):")
-        st.write(data[0].page_content[:1000])  # Show a preview of the article content
+        # # Debugging step: Check the retrieved data before creating vector store
+        # st.write("### Article Content Preview (First 1000 characters):")
+        # st.write(data[0].page_content[:1000])  # Show a preview of the article content
         
         # Proceed to store embeddings and save vector store in session state
         st.session_state['vector_store'] = create_vector_store(data)
