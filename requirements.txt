@@ -1,0 +1,11 @@
+openai
+langchain
+langchain-core
+langchain-community
+langchain-openai
+beautifulsoup4
+streamlit
+python-dotenv
+chromadb
+wikipedia
+wikipedia-api
