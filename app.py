@@ -10,7 +10,7 @@ from langchain.prompts import PromptTemplate
 from langchain.chat_models import ChatOpenAI
 import os
 from dotenv import load_dotenv
-import wikipediaapi
+from datetime import datetime  # Importing datetime to get the current time
 
 # Load environment variables from .env file
 load_dotenv()
@@ -20,79 +20,78 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
 # Streamlit app title
-st.title("Wimbledon 2023 Q&A Chatbot")
+st.set_page_config(page_title="WikiAsk", layout="wide")
+st.title("🤖 WikiAsk")
+
+# Initialize session state for vector store and chat history
+if "vector_store" not in st.session_state:
+    st.session_state.vector_store = None
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
 # User input for Wikipedia article
-url = st.text_input("Enter a Wikipedia article URL:", "https://en.wikipedia.org/wiki/2023_Wimbledon_Championships")
+url = st.text_input("Enter a Wikipedia article URL:", 
+                    placeholder="Type the Wikipedia URL here...", label_visibility="collapsed")
 
-# Initialize session state for vector store
-if 'vector_store' not in st.session_state:
-    st.session_state['vector_store'] = None
-
+# Load data from Wikipedia
 def load_data_from_wikipedia(url):
-    # Specify a user agent string for the request (to comply with Wikipedia's guidelines)
-    user_agent = 'WikiQnA/1.0 (https://github.com/bryankahlil/wikiqna; bryankahlil@gmail.com)'
-    headers = {'User-Agent': user_agent}
-
-    wiki_wiki = wikipediaapi.Wikipedia('en')
-    
-    # Extract the page title from the URL
-    page_title = url.split("/")[-1]  # Get the last part of the URL, which is the title
-    
-    # Fetch the page content
-    page = wiki_wiki.page(page_title)
-    
-    if not page.exists():
-        st.error("The article could not be found.")
-        return []
-    
-    # Now split the content
-    from langchain.text_splitter import RecursiveCharacterTextSplitter
+    # Extract the article title from the URL
+    query = url.split("/")[-1]
+    docs = WikipediaLoader(query=query, load_max_docs=1).load()
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,  # Use a larger chunk size for better context in answers
-        chunk_overlap=200,
+        chunk_size=100,
+        chunk_overlap=20,
+        length_function=len,
+        is_separator_regex=False,
     )
-
-    # Page content as a document for splitting
-    docs = [{"page_content": page.text, "metadata": {"source": url, "title": page_title}}]
-    
-    # Split the document into smaller chunks
-    data = text_splitter.split_documents(docs)
-    
-    return data
+    return text_splitter.split_documents(docs)
 
 # Store embeddings in ChromaDB
 def create_vector_store(data):
     embeddings = OpenAIEmbeddings()
-    store = Chroma.from_documents(
-        data,
-        embeddings,
-        ids=[f"{item.metadata['source']}-{index}" for index, item in enumerate(data)],
-        collection_name="Wimbledon-Embeddings",
-        persist_directory='db',
-    )
-    store.persist()
-    return store
+    try:
+        store = Chroma.from_documents(
+            data,
+            embeddings,
+            ids=[f"{item.metadata['source']}-{index}" for index, item in enumerate(data)],
+            collection_name="Wikipedia-Embeddings",
+            persist_directory='db',
+        )
+        store.persist()  # Ensure the embeddings are persisted
+        st.write(f"Vector store created with {len(data)} documents.")  # Debugging line
+        return store
+    except Exception as e:
+        st.error(f"Error creating vector store: {e}")
+        return None
 
 # Set up the question-answering chain
-def create_qa_chain(store):
-    template = """You are a bot that answers questions about Wimbledon 2023, using only the context provided.
-If you don't know the answer, simply state that you don't know.
+def create_qa_chain(store, article_title):
+    if store is None:
+        st.error("Vector store is not initialized. Please load the article first.")
+        return None
 
-{context}
+    template = f"""You are a bot that answers questions based on the Wikipedia article about {article_title}. 
+    Use only the context provided from the article. 
 
-Question: {question}"""
+    {{context}}
+
+    Question: {{question}}"""
 
     PROMPT = PromptTemplate(template=template, input_variables=["context", "question"])
     llm = ChatOpenAI(temperature=0, model="gpt-4o-mini")
-    qa_chain = RetrievalQA.from_chain_type(
-        llm=llm,
-        chain_type="stuff",
-        retriever=store.as_retriever(),
-        chain_type_kwargs={"prompt": PROMPT},
-        return_source_documents=True,
-    )
-    return qa_chain
+    
+    try:
+        qa_chain = RetrievalQA.from_chain_type(
+            llm=llm,
+            chain_type="stuff",
+            retriever=store.as_retriever(),
+            chain_type_kwargs={"prompt": PROMPT},
+            return_source_documents=True,
+        )
+        return qa_chain
+    except Exception as e:
+        st.error(f"Error creating QA chain: {e}")
+        return None
 
 # Main interaction loop
 if st.button("Load Article"):
@@ -109,22 +108,42 @@ if st.button("Load Article"):
         st.success("Article loaded successfully!")
 
 # Question input
-question = st.text_input("Ask a question about the Wimbledon 2023:")
+question = st.text_input("Ask a question about the article:", 
+                         placeholder="Type your question here...")
 
 # Get and display the answer
 if st.button("Get Answer"):
-    if st.session_state['vector_store'] is None:
+    if st.session_state.vector_store is None:
         st.warning("Please load the article first by clicking 'Load Article'.")
     elif question:
         with st.spinner("Getting answer..."):
-            qa_chain = create_qa_chain(st.session_state['vector_store'])
-            answer = qa_chain(question)
-            st.write("### Answer:")
-            st.write(answer['result'])
-            st.write("### Source Document:")
-            st.write(answer['source_documents'])
-    else:
-        st.warning("Please enter a question.")
+            # Extract article title from URL to display in the prompt
+            article_title = url.split("/")[-1].replace("_", " ")
+            
+            # Check if qa_chain is already created in session state
+            if 'qa_chain' not in st.session_state:
+                st.session_state.qa_chain = create_qa_chain(st.session_state.vector_store, article_title)
+            
+            # Now call the qa_chain with the question
+            answer = st.session_state.qa_chain({"query": question})  # Pass the question as a dictionary with the correct key
+            
+            # Store the chat history with a timestamp
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # Get current time
+            st.session_state.chat_history.append({
+                "timestamp": timestamp,
+                "user": question,
+                "bot": answer['result']
+            })
 
-# Footer for additional information
-st.write("This app allows you to ask questions about the 2023 Wimbledon Championships using Wikipedia data.")
+# Display chat messages in reverse order
+if st.session_state.chat_history:
+    st.write("### Chat History:")
+    for chat in reversed(st.session_state.chat_history):
+        # Display user messages in blue and bot messages in green
+        st.markdown(f"<div style='background-color: #000000; padding: 10px; border-radius: 5px; margin-bottom: 5px;'>"
+                    f"<strong>[{chat['timestamp']}] User:</strong> {chat['user']}</div>", 
+                    unsafe_allow_html=True)
+        st.markdown(f"<div style='background-color: #000000; padding: 10px; border-radius: 5px; margin-bottom: 5px;'>"
+                    f"<strong>[{chat['timestamp']}] Bot:</strong> {chat['bot']}</div>", 
+                    unsafe_allow_html=True)
+
