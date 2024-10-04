@@ -13,12 +13,11 @@ from dotenv import load_dotenv
 from datetime import datetime  # Importing datetime to get the current time
 
 # Load environment variables from .env file
-load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-if OPENAI_API_KEY is None:
-    st.error("OPENAI_API_KEY is not set.")
-else:
-    st.success("OPENAI_API_KEY loaded successfully.")
+OPENAI_API_KEY = st.secrets("OPENAI_API_KEY")
+
+# Set up OpenAI API key in LangChain
+os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+
 
 # Streamlit app title
 st.set_page_config(page_title="WikiAsk", layout="wide")
