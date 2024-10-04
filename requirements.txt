@@ -6,7 +6,7 @@ langchain-openai
 beautifulsoup4
 streamlit
 python-dotenv
-chromadb
+chromadb==0.3.29
 wikipedia
 wikipedia-api
 protobuf==3.20.3  # or any version <= 3.20.x
