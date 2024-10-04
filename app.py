@@ -12,6 +12,10 @@ import os
 from dotenv import load_dotenv
 from datetime import datetime  # Importing datetime to get the current time
 
+# Streamlit app title
+st.set_page_config(page_title="WikiAsk", layout="wide")
+st.title("🤖 WikiAsk")
+
 # Access the API key from secrets.toml
 openai_api_key = st.secrets["OPENAI_API_KEY"]
 
@@ -22,9 +26,7 @@ else:
     st.error("API key not found in secrets.")
 
 
-# Streamlit app title
-st.set_page_config(page_title="WikiAsk", layout="wide")
-st.title("🤖 WikiAsk")
+
 
 # Initialize session state for vector store and chat history
 if "vector_store" not in st.session_state:
