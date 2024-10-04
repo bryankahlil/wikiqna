@@ -1,5 +1,3 @@
-# app.py
-
 import streamlit as st
 from langchain.document_loaders import WikipediaLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -20,8 +18,9 @@ st.title("🤖 WikiAsk")
 openai_api_key = st.secrets["OPENAI_API_KEY"]
 
 
-
-
+# Streamlit app title
+st.set_page_config(page_title="WikiAsk", layout="wide")
+st.title("🤖 WikiAsk")
 
 # Initialize session state for vector store and chat history
 if "vector_store" not in st.session_state:
@@ -39,8 +38,8 @@ def load_data_from_wikipedia(url):
     query = url.split("/")[-1]
     docs = WikipediaLoader(query=query, load_max_docs=1).load()
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=100,
-        chunk_overlap=20,
+        chunk_size=1000,  # Use larger chunks if necessary
+        chunk_overlap=100,
         length_function=len,
         is_separator_regex=False,
     )
@@ -71,7 +70,8 @@ def create_qa_chain(store, article_title):
         return None
 
     template = f"""You are a bot that answers questions based on the Wikipedia article about {article_title}. 
-    Use only the context provided from the article. 
+    Use only the context provided from the article. Make sure to read every article and use context clues to answer. 
+    Please provide comprehensive answers using the context below, including full lists of names or items.
 
     {{context}}
 
@@ -126,7 +126,9 @@ if st.button("Get Answer"):
             
             # Now call the qa_chain with the question
             answer = st.session_state.qa_chain({"query": question})  # Pass the question as a dictionary with the correct key
-            
+            # st.write("### Retrieved Documents:")
+            # for doc in answer['source_documents']:
+            #     st.write(doc.page_content)
             # Store the chat history with a timestamp
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # Get current time
             st.session_state.chat_history.append({
