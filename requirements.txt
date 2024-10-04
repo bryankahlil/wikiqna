@@ -10,3 +10,4 @@ chromadb
 wikipedia
 wikipedia-api
 protobuf==3.20.3  # or any version <= 3.20.x
+sqlite
