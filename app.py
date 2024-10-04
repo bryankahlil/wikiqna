@@ -19,11 +19,6 @@ st.title("🤖 WikiAsk")
 # Access the API key from secrets.toml
 openai_api_key = st.secrets["OPENAI_API_KEY"]
 
-# Check if the API key is loaded correctly
-if openai_api_key:
-    st.success("API key loaded successfully.")
-else:
-    st.error("API key not found in secrets.")
 
 
 
