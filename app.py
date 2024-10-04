@@ -16,7 +16,7 @@ from datetime import datetime  # Importing datetime to get the current time
 OPENAI_API_KEY = st.secrets("OPENAI_API_KEY")
 
 # Set up OpenAI API key in LangChain
-os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
+OPENAI_API_KEY = OPENAI_API_KEY
 
 
 # Streamlit app title
