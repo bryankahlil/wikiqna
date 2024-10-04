@@ -10,13 +10,9 @@ import os
 from dotenv import load_dotenv
 from datetime import datetime  # Importing datetime to get the current time
 
-# Streamlit app title
-st.set_page_config(page_title="WikiAsk", layout="wide")
-st.title("🤖 WikiAsk")
 
 # Access the API key from secrets.toml
 openai_api_key = st.secrets["OPENAI_API_KEY"]
-
 
 # Streamlit app title
 st.set_page_config(page_title="WikiAsk", layout="wide")
