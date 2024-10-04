@@ -13,10 +13,10 @@ from dotenv import load_dotenv
 from datetime import datetime  # Importing datetime to get the current time
 
 # Load environment variables from .env file
-OPENAI_API_KEY = st.secrets("OPENAI_API_KEY")
+openai_api_key = st.secrets("OPENAI_API_KEY")
 
 # Set up OpenAI API key in LangChain
-openai.api_key = OPENAI_API_KEY
+openai.api_key = openai_api_key
 
 
 # Streamlit app title
